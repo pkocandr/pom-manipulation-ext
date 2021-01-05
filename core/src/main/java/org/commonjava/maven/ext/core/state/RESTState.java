@@ -15,6 +15,7 @@
  */
 package org.commonjava.maven.ext.core.state;
 
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.commonjava.maven.ext.annotation.ConfigValue;
 import org.commonjava.maven.ext.core.ManipulationSession;
@@ -39,6 +40,12 @@ public class RESTState implements State
 
     @ConfigValue( docIndex = "dep-manip.html#rest-endpoint" )
     public static final String REST_REPO_GROUP = "restRepositoryGroup";
+
+    @ConfigValue( docIndex = "dep-manip.html#rest-endpoint" )
+    public static final String REST_BREW_PULL_ACTIVE = "restBrewPullActive";
+
+    @ConfigValue( docIndex = "dep-manip.html#rest-endpoint" )
+    public static final String REST_TEMPORARY_BUILD = "restTemporaryBuild";
 
     @ConfigValue( docIndex = "dep-manip.html#rest-endpoint" )
     public static final String REST_MAX_SIZE = "restMaxSize";
@@ -76,6 +83,7 @@ public class RESTState implements State
         initialise( session.getUserProperties() );
     }
 
+    @Override
     public void initialise( Properties userProps )
     {
         final VersioningState vState = session.getState( VersioningState.class );
@@ -84,6 +92,8 @@ public class RESTState implements State
         restSuffixAlign = Boolean.parseBoolean( userProps.getProperty( REST_SUFFIX, "true" ) );
 
         String repositoryGroup = userProps.getProperty( REST_REPO_GROUP, "" );
+        Boolean brewPullActive = BooleanUtils.toBooleanObject( userProps.getProperty( REST_BREW_PULL_ACTIVE ) );
+        Boolean temporaryBuild = BooleanUtils.toBooleanObject( userProps.getProperty( REST_TEMPORARY_BUILD ) );
         int restMaxSize = Integer.parseInt( userProps.getProperty( REST_MAX_SIZE, "-1" ) );
         int restMinSize = Integer.parseInt( userProps.getProperty( REST_MIN_SIZE,
                                                                    String.valueOf( DefaultTranslator.CHUNK_SPLIT_COUNT ) ) );
@@ -95,8 +105,9 @@ public class RESTState implements State
         int restRetryDuration = Integer.parseInt( userProps.getProperty( REST_RETRY_DURATION_SEC,
                                                                          String.valueOf( DefaultTranslator.RETRY_DURATION_SEC ) ) );
 
-        restEndpoint = new DefaultTranslator( restURL, restMaxSize, restMinSize, repositoryGroup, vState.getIncrementalSerialSuffix(),
-                                              restHeaders, restConnectionTimeout, restSocketTimeout, restRetryDuration );
+        restEndpoint = new DefaultTranslator( restURL, restMaxSize, restMinSize, repositoryGroup, brewPullActive, temporaryBuild,
+                                              vState.getIncrementalSerialSuffix(), restHeaders, restConnectionTimeout,
+                                              restSocketTimeout, restRetryDuration );
     }
 
     /**

@@ -76,6 +76,10 @@ public class DefaultTranslator
 
     private final String repositoryGroup;
 
+    private final Boolean brewPullActive;
+
+    private final Boolean temporaryBuild;
+
     private final String incrementalSerialSuffix;
 
     private final Map<String, String> restHeaders;
@@ -101,15 +105,21 @@ public class DefaultTranslator
      * @param endpointUrl is the URL to talk to.
      * @param restMaxSize initial (maximum) size of the rest call; if zero will send everything.
      * @param restMinSize minimum size for the call
-     * @param repositoryGroup the group to pass to the endpoint.
+     * @param repositoryGroup the group to pass to the endpoint, still can be used, but is now replaced by
+     *        brewPullActive and temporaryBuild flags.
+     * @param brewPullActive flag saying if brew pull should be used for version retrieval
+     * @param temporaryBuild
      * @param incrementalSerialSuffix the suffix to pass to the endpoint.
      * @param restHeaders the headers to pass to the endpoint
      */
     public DefaultTranslator( String endpointUrl, int restMaxSize, int restMinSize, String repositoryGroup,
-                              String incrementalSerialSuffix, Map<String, String> restHeaders,
-                              int restConnectionTimeout, int restSocketTimeout, int restRetryDuration )
+                              Boolean brewPullActive, Boolean temporaryBuild, String incrementalSerialSuffix,
+                              Map<String, String> restHeaders, int restConnectionTimeout, int restSocketTimeout,
+                              int restRetryDuration )
     {
         this.repositoryGroup = repositoryGroup;
+        this.brewPullActive = brewPullActive;
+        this.temporaryBuild = temporaryBuild;
         this.incrementalSerialSuffix = incrementalSerialSuffix;
         this.endpointUrl = endpointUrl + ( isNotBlank( endpointUrl ) ? endpointUrl.endsWith( "/" ) ? "" : "/" : "");
         this.initialRestMaxSize = restMaxSize;
@@ -127,11 +137,13 @@ public class DefaultTranslator
      * @param repositoryGroup the group to pass to the endpoint.
      * @param incrementalSerialSuffix the suffix to pass to the endpoint.
      */
-    public DefaultTranslator( String endpointUrl, int restMaxSize, int restMinSize, String repositoryGroup, String incrementalSerialSuffix,
+    public DefaultTranslator( String endpointUrl, int restMaxSize, int restMinSize, String repositoryGroup,
+                              Boolean brewPullActive, Boolean temporaryBuild, String incrementalSerialSuffix,
                               int restConnectionTimeout, int restSocketTimeout, int restRetryDuration)
     {
-        this ( endpointUrl, restMaxSize, restMinSize, repositoryGroup, incrementalSerialSuffix,
-               Collections.emptyMap(), restConnectionTimeout, restSocketTimeout, restRetryDuration );
+        this ( endpointUrl, restMaxSize, restMinSize, repositoryGroup, brewPullActive, temporaryBuild,
+               incrementalSerialSuffix, Collections.emptyMap(), restConnectionTimeout, restSocketTimeout,
+               restRetryDuration );
     }
 
     private void partition(List<ProjectVersionRef> projects, Queue<Task> queue) {
@@ -302,6 +314,7 @@ public class DefaultTranslator
      * There may be a lot of them, possibly causing timeouts or other issues.
      * This is mitigated by splitting them into smaller chunks when an error occurs and retrying.
      */
+    @Override
     public Map<ProjectVersionRef, String> translateVersions( List<ProjectVersionRef> p ) throws RestException
     {
         final List<ProjectVersionRef> projects = p.stream().distinct().collect( Collectors.toList() );
@@ -419,7 +432,8 @@ public class DefaultTranslator
             {
                 LookupGAVsRequest request =
                                 new LookupGAVsRequest( Collections.emptySet(), Collections.emptySet(), repositoryGroup,
-                                                       incrementalSerialSuffix, GAVUtils.generateGAVs( chunk ) );
+                                                       brewPullActive, temporaryBuild, incrementalSerialSuffix,
+                                                       GAVUtils.generateGAVs( chunk ) );
 
                 r = Unirest.post( this.endpointUrl )
                            .header( "accept", "application/json" )
